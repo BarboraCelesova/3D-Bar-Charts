@@ -1,0 +1,3 @@
+A Pen created at CodePen.io. You can find this one at https://codepen.io/anon/pen/YaNdNP.
+
+ I wanted to see if I could use Three.js and Greensock to make dynamic, animated bar graphs that could potentially be used in conjunction with data pulled from sources such as XML. Whilst I didn't get as far as pulling in the data, it'd be no challenge to replace the randomised values of each bar with dynamic data.
