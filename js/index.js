@@ -11,7 +11,8 @@ $(function() {
   var red = 0xff0000;
   var blue = 0x1176c5;
   var white = 0xf9f9f9;
-
+  var attributes = [];
+  attributes[0] = "ARP";
   // Arrays
   var bar = [];
   var dataset;
@@ -38,16 +39,16 @@ $(function() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 2000);
 
-    camera.position.set(130, 100, 100);
-    camera.lookAt(new THREE.Vector3(20, 40, 0));
+    camera.position.set(130, 100, -100);
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
 
     // Setup Renderer
     renderer = new THREE.WebGLRenderer({
       antialias: true
     });
 
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+   // renderer.shadowMap.enabled = true;
+    //renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.render(scene, camera);
@@ -65,10 +66,9 @@ $(function() {
       console.log(dataset);
     createFloor();
     //creating bars
-    createBar(5, -10, red);
-    createBar(5, -5, white);
-    createBar(5, 0, blue);
-
+      for (i = 0; i < dataset.length; i++) {
+          createBar(3,i*5, red, i);
+      }
     createLight();
   }
 
@@ -85,10 +85,9 @@ $(function() {
             }
             result.push(obj);
         }
-
         //console.log(JSON.stringify(result)); //JSON
-        dataset = JSON.stringify(result); //JavaScript object
-        console.log(dataset);
+        dataset = result; //JavaScript object
+
     }
 
   ///////////////////////
@@ -124,41 +123,42 @@ $(function() {
     scene.add(ambient, spot);
   }
 
-  function createBar(total, z, colour) {
+  function createBar(total, z, colour, index) {
 
     for (var i = 0; i < total; i += 1) {
 
-      var geometry = new THREE.BoxGeometry(2, 2, 2);
-      geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, 1, z));
+        var geometry = new THREE.BoxGeometry(2, dataset[index][Object.keys(dataset[index])[i]], 2);
+        geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, 1, z));
 
-      var material = new THREE.MeshPhongMaterial({
-        color: colour
-      });
+        var material = new THREE.MeshPhongMaterial({
+            color: colour
+        });
 
-      id = new THREE.Mesh(geometry, material);
+        id = new THREE.Mesh(geometry, material);
 
-      id.position.x = i * 5;
-      id.name = "bar-" + i;
-      id.castShadow = true;
-      id.receiveShadow = true;
+        id.position.x = -i * 5;
+        id.name = "bar-" + i;
+        id.castShadow = true;
+        id.receiveShadow = true;
 
-      scene.add(id);
-      bar.push(id);
+        scene.add(id);
+        bar.push(id);
 
-      selectedBar = bar[Math.floor(bar.length / 2)];
+        selectedBar = bar[Math.floor(bar.length / 2)];
     }
 
-    for (var i = 0; i < bar.length; i++) {
+    //animacia do vysky
+    /*for (var i = 0; i < bar.length; i++) {
 
-      var tween = new TweenMax.to(bar[i].scale, 1, {
+        var tween = new TweenMax.to(bar[i].scale, 1, {
 
-        ease: Elastic.easeOut.config(1, 1),
+            ease: Elastic.easeOut.config(1, 1),
 
-        y: Math.random() * 30 /*i+1*/ ,
-        delay: i * 0.25
+            y: dataset[index].Vek,
+            delay: i * 0.25
 
-      });
-    }
+        });
+    }*/
   }
 
   function createFloor() {
