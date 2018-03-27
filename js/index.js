@@ -11,12 +11,11 @@ $(function() {
   var red = 0xff0000;
   var blue = 0x1176c5;
   var white = 0xf9f9f9;
-  var attributes = [];
-  attributes[0] = "ARP";
+
   // Arrays
   var bar = [];
   var dataset;
-
+  var packetNum = {};
   ///////////////////////
   // Initial Setup     //
   ///////////////////////
@@ -29,7 +28,6 @@ $(function() {
   }
 
   function initListeners() {
-
     $(window).resize(onWindowResize);
   }
 
@@ -37,10 +35,10 @@ $(function() {
 
     // Setup Scene / Camera
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 2000);
+    camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 10000);
 
-    camera.position.set(130, 100, -100);
-    camera.lookAt(new THREE.Vector3(0, 0, 0));
+    camera.position.set(200, 200, 100);
+    camera.lookAt(new THREE.Vector3(0, 0, -160));
 
     // Setup Renderer
     renderer = new THREE.WebGLRenderer({
@@ -56,18 +54,37 @@ $(function() {
     $("#webGL-container").append(renderer.domElement);
 
       $.when($.ajax({
-          url: 'dataset/baska.csv',
+          url: 'dataset/bcsv.csv',
           dataType: 'text'
       }).done(parsingDataset)).then(init3DElements);
   }
 
   function init3DElements() {
 
-      console.log(dataset);
+      //console.log(dataset);
+        var count = 0;
+      for(var i = 0; i < dataset.length; i++){
+           //"Timestamp": 0,"ARP": 0, "IP": 0, "IPv6": 0, "TCP": 0, "UDP": 0, "Others": 0
+          if (packetNum[dataset[i].Timestamp] == null){
+              count++;
+              packetNum[dataset[i].Timestamp] = {"ARP": 0, "IP": 0, "IPv6": 0, "TCP": 0, "UDP": 0, "Others": 0};
+          }
+          switch(dataset[i].Prot){
+              case "arp": packetNum[dataset[i].Timestamp].ARP++; break;
+              case "ip": packetNum[dataset[i].Timestamp].IP++; break;
+              case "ipv6": packetNum[dataset[i].Timestamp].IPv6++; break;
+              case "tcp": packetNum[dataset[i].Timestamp].TCP++; break;
+              case "udp": packetNum[dataset[i].Timestamp].UDP++; break;
+              default : packetNum[dataset[i].Timestamp].Others++;
+          }
+      }
+      console.log(packetNum);
     createFloor();
     //creating bars
-      for (i = 0; i < dataset.length; i++) {
-          createBar(3,i*5, red, i);
+      var i = 0;
+      for (var timestamp in packetNum) {
+          createBar(6, -i*5, red, timestamp);
+          i++;
       }
     createLight();
   }
@@ -123,11 +140,11 @@ $(function() {
     scene.add(ambient, spot);
   }
 
-  function createBar(total, z, colour, index) {
+  function createBar(total, z, colour, timestamp) {
+    var i = 0;
+    for (var protocol in packetNum[timestamp]) {
 
-    for (var i = 0; i < total; i += 1) {
-
-        var geometry = new THREE.BoxGeometry(2, dataset[index][Object.keys(dataset[index])[i]], 2);
+        var geometry = new THREE.BoxGeometry(2, packetNum[timestamp][protocol], 2);
         geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, 1, z));
 
         var material = new THREE.MeshPhongMaterial({
@@ -136,7 +153,7 @@ $(function() {
 
         id = new THREE.Mesh(geometry, material);
 
-        id.position.x = -i * 5;
+        id.position.x = i * 5;
         id.name = "bar-" + i;
         id.castShadow = true;
         id.receiveShadow = true;
@@ -145,6 +162,7 @@ $(function() {
         bar.push(id);
 
         selectedBar = bar[Math.floor(bar.length / 2)];
+        i++;
     }
 
     //animacia do vysky
