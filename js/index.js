@@ -82,7 +82,7 @@ function init3DElements() {
           case "ipv6": packetNum[idx].IPv6++; break;
           case "tcp": packetNum[idx].TCP++; break;
           case "udp": packetNum[idx].UDP++; break;
-          //default : packetNum[idx].Others++;
+          default : packetNum[idx].Others++;
       }
   }
   console.log(packetNum);
@@ -140,7 +140,7 @@ var spot = new THREE.SpotLight({
   intensity: 0.1
 });
 
-spot.position.set(-50, 100, 1000);
+spot.position.set(-50, 1000, 1000);
 spot.castShadow = true;
 spot.shadowDarkness = 0.2;
 
