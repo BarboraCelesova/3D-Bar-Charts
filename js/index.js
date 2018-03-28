@@ -7,11 +7,14 @@ $(function() {
 // Values
 var tick = 0;
 var size = 0.25;
-var shiftInTime = 30;
+var shiftInTime = 40;
 
 var red = 0xff0000;
 var blue = 0x1176c5;
 var white = 0xf9f9f9;
+var green  = 0x00ff00;
+var brown = 0xff8000;
+var black = 0x000000;
 
 // Arrays
 var bar = [];
@@ -38,11 +41,11 @@ function init3DScene() {
 scene = new THREE.Scene();
 camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 10000);
 
-camera.position.set(1200, 1200, 1100);
-camera.lookAt(new THREE.Vector3(100, 250, -160));
+camera.position.set(-800, 300, 1300);
+camera.lookAt(new THREE.Vector3(-150, 320, 560));
 
 // Setup Renderer
-renderer = new THREE.WebGLRenderer({
+  renderer = new THREE.WebGLRenderer({
   antialias: true
 });
 
@@ -87,7 +90,7 @@ createFloor();
 //creating bars
   i = 0;
   for (var timestamp in packetNum) {
-      createBar(6, -i*5, red, timestamp);
+      createBar(6, -400+(-i*5), timestamp);
       i++;
   }
 createLight();
@@ -137,20 +140,29 @@ var spot = new THREE.SpotLight({
   intensity: 0.1
 });
 
-spot.position.set(-50, 100, 100);
+spot.position.set(-50, 100, 1000);
 spot.castShadow = true;
 spot.shadowDarkness = 0.2;
 
 scene.add(ambient, spot);
 }
 
-function createBar(total, z, colour, timestamp) {
+function createBar(total, z, timestamp) {
 var i = 0;
+var colour;
 for (var protocol in packetNum[timestamp]) {
 
     var geometry = new THREE.BoxGeometry(2, packetNum[timestamp][protocol], 2);
     geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, 1, z));
 
+    switch(protocol){
+        case "ARP": colour = red; break;
+        case "IP": colour = white; break;
+        case "IPv6": colour = blue; break;
+        case "TCP": colour = green; break;
+        case "UDP": colour = brown; break;
+        default : colour = black;
+    }
     var material = new THREE.MeshPhongMaterial({
         color: colour
     });
