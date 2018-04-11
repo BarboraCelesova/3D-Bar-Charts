@@ -16,6 +16,8 @@ $(function () {
     var brown = 0xff8000;
     var black = 0x000000;
 
+    var scene, camera, raycaster, mouse, renderer, controls;
+
 // Arrays
     var bar = [];
     var dataset;
@@ -25,11 +27,12 @@ $(function () {
 ///////////////////////
 
     init();
+    document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+    document.addEventListener("contextmenu", function(e) { e.preventDefault(); });
 
     function init() {
         initListeners();
         init3DScene();
-
     }
 
     function initListeners() {
@@ -42,6 +45,9 @@ $(function () {
         // Setup Scene / Camera
         scene = new THREE.Scene();
         camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 10000);
+        raycaster = new THREE.Raycaster();
+        mouse = new THREE.Vector2();
+        var projector = new THREE.Projector();
 
         camera.position.set(-1400, 500, 2500);
         camera.lookAt(new THREE.Vector3(-550, 1620, 660));
@@ -92,14 +98,68 @@ $(function () {
         }).done(parsingDataset)).then(init3DElements);
     }
 
-    function init3DElements() {
 
+
+    function onDocumentMouseDown( event ) {
+
+        event.preventDefault();
+
+        mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
+        mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
+
+        raycaster.setFromCamera( mouse, camera );
+
+        var intersects = raycaster.intersectObjects(bar);
+
+        if ( intersects.length > 0 ) {
+            //console.log(intersects[ 0 ].object);
+            if(event.which === 1){
+                    intersects[0].object.material.color.setHex(Math.random() * 0xffffff);
+            }
+            else if (event.which === 3){
+                // Get the modal
+                var modal = document.getElementById('myModal');
+                var content = document.getElementById("myModalBody");
+                var text = 'Src IP addr, Dst IP add' + '<br/>';
+                var timestamp = intersects[0].object['timestamp'];
+                var protocol = intersects[0].object['protocol'];
+                for(var i = 0; i < packetNum[timestamp][protocol]['count']; i++){
+                    text = text + packetNum[timestamp][protocol]['srcIP'][i]
+                        + '      ' + packetNum[timestamp][protocol]['dstIP'][i] + '<br/>';
+                }
+                content.innerHTML = text;
+
+                // Get the <span> element that closes the modal
+                var span = document.getElementsByClassName("close")[0];
+
+                // When the user clicks on <span> (x), close the modal
+                modal.style.display = "block";
+
+                span.onclick = function() {
+                    modal.style.display = "none";
+                };
+                // When the user clicks anywhere outside of the modal, close it
+                window.onclick = function(event) {
+                    if (event.target === modal) {
+                        modal.style.display = "none";
+                    }
+                }
+            }
+        }
+    }
+
+    function init3DElements() {
 
         //console.log(dataset);
 
         var ref = parseInt(dataset[0].Timestamp);
         while (ref <= parseInt(dataset[dataset.length - 1].Timestamp)) {
-            packetNum[ref] = {"ARP": 0, "IP": 0, "IPv6": 0, "TCP": 0, "UDP": 0, "Others": 0};
+            packetNum[ref] = {"ARP": {'count': 0, 'srcIP':[], 'dstIP':[]},
+                "IP": {'count': 0, 'srcIP':[], 'dstIP':[]},
+                "IPv6": {'count': 0, 'srcIP':[], 'dstIP':[]},
+                "TCP": {'count': 0, 'srcIP':[], 'dstIP':[]},
+                "UDP": {'count': 0, 'srcIP':[], 'dstIP':[]},
+                "Others": {'count': 0, 'srcIP':[], 'dstIP':[]}};
             ref += shiftInTime; //shift in timestamps of charts
         }
         ref = parseInt(dataset[0].Timestamp);
@@ -108,22 +168,34 @@ $(function () {
             idx = Math.floor((parseInt(dataset[i].Timestamp) - ref) / shiftInTime) * shiftInTime + ref;
             switch (dataset[i].Prot) {
                 case "arp":
-                    packetNum[idx].ARP++;
+                    packetNum[idx]['ARP']['count']++;
+                    packetNum[idx]['ARP']['srcIP'].push(dataset[i]['SrcIP']);
+                    packetNum[idx]['ARP']['dstIP'].push(dataset[i]['DstIP']);
                     break;
                 case "ip":
-                    packetNum[idx].IP++;
+                    packetNum[idx]['IP']['count']++;
+                    packetNum[idx]['IP']['srcIP'].push(dataset[i]['SrcIP']);
+                    packetNum[idx]['IP']['dstIP'].push(dataset[i]['DstIP']);
                     break;
                 case "ipv6":
-                    packetNum[idx].IPv6++;
+                    packetNum[idx]['IPv6']['count']++;
+                    packetNum[idx]['IPv6']['srcIP'].push(dataset[i]['SrcIP']);
+                    packetNum[idx]['IPv6']['dstIP'].push(dataset[i]['DstIP']);
                     break;
                 case "tcp":
-                    packetNum[idx].TCP++;
+                    packetNum[idx]['TCP']['count']++;
+                    packetNum[idx]['TCP']['srcIP'].push(dataset[i]['SrcIP']);
+                    packetNum[idx]['TCP']['dstIP'].push(dataset[i]['DstIP']);
                     break;
                 case "udp":
-                    packetNum[idx].UDP++;
+                    packetNum[idx]['UDP']['count']++;
+                    packetNum[idx]['UDP']['srcIP'].push(dataset[i]['SrcIP']);
+                    packetNum[idx]['UDP']['dstIP'].push(dataset[i]['DstIP']);
                     break;
                 default :
-                    packetNum[idx].Others++;
+                    packetNum[idx]['Others']['count']++;
+                    packetNum[idx]['Others']['srcIP'].push(dataset[i]['SrcIP']);
+                    packetNum[idx]['Others']['dstIP'].push(dataset[i]['DstIP']);
             }
         }
         console.log(packetNum);
@@ -194,9 +266,9 @@ $(function () {
         var i = 0;
         var colour;
         for (var protocol in packetNum[timestamp]) {
-                var geometry = new THREE.BoxGeometry(2, packetNum[timestamp][protocol], 2);
-                if (packetNum[timestamp][protocol] == 0 ) {
-                    var geometry = new THREE.BoxGeometry(2, 0.005, 2);
+                var geometry = new THREE.BoxGeometry(2, packetNum[timestamp][protocol]['count'], 2);
+                if (packetNum[timestamp][protocol]['count'] == 0 ) {
+                    geometry = new THREE.BoxGeometry(2, 0.005, 2);
                 }
                 geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, 0, z));
 
@@ -227,6 +299,8 @@ $(function () {
 
                 id.position.x = i * 5;
                 id.position.z = 1000;
+                id['protocol'] = protocol;
+                id['timestamp'] = timestamp;
                 // id.name = "bar-" + i;
                 // id.castShadow = true;
                 // id.receiveShadow = true;
