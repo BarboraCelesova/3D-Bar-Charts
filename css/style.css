@@ -1,4 +1,7 @@
 body { margin: 0; font-family: Arial, Helvetica, sans-serif;}
+
+.tab9 {position:absolute;left:150px; }
+
 /* The Modal (background) */
 .modal {
     display: none; /* Hidden by default */

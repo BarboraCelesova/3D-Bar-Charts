@@ -1,12 +1,7 @@
 $(function () {
 
-///////////////////////
-// Initial Variables //
-///////////////////////
-
 // Values
     var tick = 0;
-    //var size = 0.25;
     var shiftInTime = 10;
 
     var red = 0xff0000;
@@ -17,14 +12,19 @@ $(function () {
     var black = 0x000000;
 
     var scene, camera, raycaster, mouse, renderer, controls;
+    var modal, header, content, span;
 
 // Arrays
     var bar = [];
     var dataset;
     var packetNum = {};
-///////////////////////
-// Initial Setup     //
-///////////////////////
+    // var opts = {
+    //      height: 2000,
+    //      width: 2000,
+    //      linesHeight: 10,
+    //      linesWidth: 20,
+    //      color: 0xcccccc
+    //     };
 
     init();
     document.addEventListener( 'mousedown', onDocumentMouseDown, false );
@@ -33,6 +33,7 @@ $(function () {
     function init() {
         initListeners();
         init3DScene();
+        //createAGrid(opts);
     }
 
     function initListeners() {
@@ -41,22 +42,14 @@ $(function () {
 
 
     function init3DScene() {
-
         // Setup Scene / Camera
         scene = new THREE.Scene();
         camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 10000);
         raycaster = new THREE.Raycaster();
         mouse = new THREE.Vector2();
-        var projector = new THREE.Projector();
 
         camera.position.set(-1400, 500, 2500);
         camera.lookAt(new THREE.Vector3(-550, 1620, 660));
-
-
-        //Axis helper
-        /* var axisHelper = new THREE.AxisHelper(800);
-         axisHelper.position.set(0,1,-900);
-         scene.add(axisHelper);*/
 
         // Setup Renderer
         renderer = new THREE.WebGLRenderer({
@@ -76,19 +69,25 @@ $(function () {
 
         controls.update();
 
+        // Get the modal
+        modal = document.getElementById('myModal');
+        header = document.getElementById('myModalHeader');
+        content = document.getElementById("myModalBody");
 
-        // // resize scene based on browser window size
-        // window.addEventListener('resize', function () {
-        //     var WIDTH = window.innerWidth,
-        //         HEIGHT = window.innerHeight;
-        //     renderer.setSize(WIDTH, HEIGHT);
-        //     camera.aspect = WIDTH / HEIGHT;
-        //     camera.updateProjectionMatrix();
-        // });
+        // Get the <span> element that closes the modal
+        span = document.getElementsByClassName("close")[0];
+        span.onclick = function() {
+            modal.style.display = "none";
+        };
 
+        // When the user clicks anywhere outside of the modal, close it
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = "none";
+            }
+        };
 
         renderer.render(scene, camera);
-
 
         $("#webGL-container").append(renderer.domElement);
 
@@ -99,10 +98,9 @@ $(function () {
     }
 
 
-
     function onDocumentMouseDown( event ) {
 
-        event.preventDefault();
+        //event.preventDefault();
 
         mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
         mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
@@ -112,38 +110,25 @@ $(function () {
         var intersects = raycaster.intersectObjects(bar);
 
         if ( intersects.length > 0 ) {
-            //console.log(intersects[ 0 ].object);
+
             if(event.which === 1){
-                    intersects[0].object.material.color.setHex(Math.random() * 0xffffff);
+                    intersects[0].object.material.color.setHex(intersects[0].object.material.color.getHex() * 0xffffff);
             }
             else if (event.which === 3){
-                // Get the modal
-                var modal = document.getElementById('myModal');
-                var content = document.getElementById("myModalBody");
-                var text = 'Src IP addr, Dst IP add' + '<br/>';
                 var timestamp = intersects[0].object['timestamp'];
                 var protocol = intersects[0].object['protocol'];
+
+                header.innerHTML = ' <h2> Details - ' + packetNum[timestamp][protocol]['count'] + ' packets </h2>';
+
+                var text = '<h3>Src IP addr  <span class="tab9"> Dst IP add </h3> </span> <br/>';
                 for(var i = 0; i < packetNum[timestamp][protocol]['count']; i++){
                     text = text + packetNum[timestamp][protocol]['srcIP'][i]
-                        + '      ' + packetNum[timestamp][protocol]['dstIP'][i] + '<br/>';
+                        + ' <span class="tab9">' + packetNum[timestamp][protocol]['dstIP'][i] + '</span> <br/>';
                 }
                 content.innerHTML = text;
 
-                // Get the <span> element that closes the modal
-                var span = document.getElementsByClassName("close")[0];
-
                 // When the user clicks on <span> (x), close the modal
                 modal.style.display = "block";
-
-                span.onclick = function() {
-                    modal.style.display = "none";
-                };
-                // When the user clicks anywhere outside of the modal, close it
-                window.onclick = function(event) {
-                    if (event.target === modal) {
-                        modal.style.display = "none";
-                    }
-                }
             }
         }
     }
@@ -228,10 +213,6 @@ $(function () {
 
     }
 
-///////////////////////
-// Interactions      //
-///////////////////////
-
     function onWindowResize() {
 
         windowHalfX = window.innerWidth / 2;
@@ -242,10 +223,6 @@ $(function () {
         renderer.setSize(window.innerWidth, window.innerHeight);
 
     }
-
-///////////////////////
-// Create Elements   //
-///////////////////////
 
     function createLight() {
         var ambient = new THREE.AmbientLight(0x999999);
@@ -267,7 +244,7 @@ $(function () {
         var colour;
         for (var protocol in packetNum[timestamp]) {
                 var geometry = new THREE.BoxGeometry(2, packetNum[timestamp][protocol]['count'], 2);
-                if (packetNum[timestamp][protocol]['count'] == 0 ) {
+                if (packetNum[timestamp][protocol]['count'] == 0) {
                     geometry = new THREE.BoxGeometry(2, 0.005, 2);
                 }
                 geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, 0, z));
@@ -292,7 +269,9 @@ $(function () {
                         colour = black;
                 }
                 var material = new THREE.MeshPhongMaterial({
-                    color: colour
+                    color: colour,
+                    transparent : true,
+                    opacity : 1
                 });
 
                 id = new THREE.Mesh(geometry, material);
@@ -311,18 +290,7 @@ $(function () {
                 selectedBar = bar[Math.floor(bar.length / 2)];
 
             i++;
-            //animacia do vysky
-            /*for (var i = 0; i < bar.length; i++) {
 
-                var tween = new TweenMax.to(bar[i].scale, 1, {
-
-                    ease: Elastic.easeOut.config(1, 1),
-
-                    y: dataset[index].Vek,
-                    delay: i * 0.25
-
-                });
-            }*/
         }
     }
 
@@ -353,7 +321,9 @@ $(function () {
         var tcp = 3;
         var udp = 4;
         var others = 5;
+
         var gui = new dat.gui.GUI();
+
         var obj = {
             ARP: bar[arp].material.color.getHex(),
             IP: bar[ip].material.color.getHex(),
@@ -363,55 +333,158 @@ $(function () {
             OTHERS: bar[others].material.color.getHex()
         };
 
+        var funkcia = {
+            MathFunction: 'Less',
+            Number : 50,
+            Reset : function() { resetBars() }
+        };
+
         var colorFolder = gui.addFolder('Bars colors');
+        colorFolder.open();
+
         var controllerARP = colorFolder.addColor(obj, 'ARP');
         controllerARP.onChange( function (colorValue) {
             for(var b = arp; b < bar.length; b+=6){
                 bar[b].material.color = new THREE.Color(colorValue);
             }
-        })
+        });
 
         var controllerIP = colorFolder.addColor(obj, 'IP');
         controllerIP.onChange( function (colorValue) {
             for(var b = ip; b < bar.length; b+=6){
                 bar[b].material.color = new THREE.Color(colorValue);
             }
-        })
+        });
 
         var controllerIPv6 = colorFolder.addColor(obj, 'IPv6');
         controllerIPv6.onChange( function (colorValue) {
             for(var b = ipv6; b < bar.length; b+=6){
                 bar[b].material.color = new THREE.Color(colorValue);
             }
-        })
+        });
 
         var controllerTCP = colorFolder.addColor(obj, 'TCP');
         controllerTCP.onChange( function (colorValue) {
             for(var b = tcp; b < bar.length; b+=6){
                 bar[b].material.color = new THREE.Color(colorValue);
             }
-        })
+        });
 
         var controllerUDP = colorFolder.addColor(obj, 'UDP');
         controllerUDP.onChange( function (colorValue) {
             for(var b = udp; b < bar.length; b+=6){
                 bar[b].material.color = new THREE.Color(colorValue);
             }
-        })
+        });
 
         var controllerOTHERS = colorFolder.addColor(obj, 'OTHERS');
         controllerOTHERS.onChange( function (colorValue) {
             for(var b = others; b < bar.length; b+=6){
                 bar[b].material.color = new THREE.Color(colorValue);
             }
-        })
+        });
+
+
+        var filterFolder = gui.addFolder('Filter');
+        filterFolder.open();
+
+        filterFolder.add(funkcia, "MathFunction", ['Less', 'Greater', 'Equal']);
+        var controllerCount = filterFolder.add(funkcia, "Number", 0, 500);
+
+        controllerCount.onChange(function () {
+            for (var b = 0; b < bar.length; b++) {
+                bar[b].material.opacity = 1;
+            }
+                switch (funkcia.MathFunction){
+                    case "Greater":
+                        for (var b = 0; b < bar.length; b++) {
+                            if (packetNum[bar[b]['timestamp']][bar[b]['protocol']]['count'] < funkcia.Number){
+                                bar[b].material.opacity = 0.3;
+                            }
+                        }
+                        break;
+                    case "Less":
+                        for (var b = 0; b < bar.length; b++) {
+                            if (packetNum[bar[b]['timestamp']][bar[b]['protocol']]['count'] > funkcia.Number){
+                                bar[b].material.opacity = 0.3;
+                            }
+                        }
+                        break;
+                    case "Equal":
+                        for (var b = 0; b < bar.length; b++) {
+                            if (packetNum[bar[b]['timestamp']][bar[b]['protocol']]['count'] != funkcia.Number){
+                                bar[b].material.opacity = 0.3;
+                            }
+                        }
+                        break;
+                }
+        });
+        gui.add(funkcia, 'Reset').name("Reset bars");
+
+        function resetBars (){
+            for (var b = 0; b < bar.length; b++) {
+                bar[b].material.opacity = 1;
+                switch (bar[b]['protocol']) {
+                    case "ARP":
+                        bar[b].material.color = new THREE.Color(red);
+                        break;
+                    case "IP":
+                        bar[b].material.color = new THREE.Color(pink);
+                        break;
+                    case "IPv6":
+                        bar[b].material.color = new THREE.Color(blue);
+                        break;
+                    case "TCP":
+                        bar[b].material.color = new THREE.Color(green);
+                        break;
+                    case "UDP":
+                        bar[b].material.color = new THREE.Color(brown);
+                        break;
+                    default :
+                        bar[b].material.color = new THREE.Color(black);
+                }
+            }
+        }
 
     }
-    
-///////////////////////
-// Render            //
-///////////////////////
 
+    function createAGrid(opts) {
+        var config = opts || {
+            height: 6000,
+            width: 6000,
+            linesHeight: 100,
+            linesWidth: 100,
+            color: 0xDD006C
+        };
+
+        var material = new THREE.LineBasicMaterial({
+            color: config.color,
+            opacity: 0.2
+        });
+
+        var gridObject = new THREE.Object3D(),
+            gridGeo = new THREE.Geometry(),
+            stepw = 2 * config.width / config.linesWidth,
+            steph = 2 * config.height / config.linesHeight;
+
+        //width
+        for (var i = -config.width; i <= config.width; i += stepw) {
+            gridGeo.vertices.push(new THREE.Vector3(-config.height, i, 0));
+            gridGeo.vertices.push(new THREE.Vector3(config.height, i, 0));
+
+        }
+        //height
+        for (var i = -config.height; i <= config.height; i += steph) {
+            gridGeo.vertices.push(new THREE.Vector3(i, -config.width, 0));
+            gridGeo.vertices.push(new THREE.Vector3(i, config.width, 0));
+        }
+
+        var line = new THREE.Line(gridGeo, material, THREE.LinePieces);
+        gridObject.add(line);
+
+        return gridObject;
+    }
+    
     function render() {
 
         tick++;
