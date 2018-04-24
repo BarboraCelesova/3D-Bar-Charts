@@ -1,6 +1,17 @@
 $(function () {
 
 // Values
+    THREE.SpriteAlignment = {};
+    THREE.SpriteAlignment.topLeft = new THREE.Vector2( 1, -1 );
+    THREE.SpriteAlignment.topCenter = new THREE.Vector2( 0, -1 );
+    THREE.SpriteAlignment.topRight = new THREE.Vector2( -1, -1 );
+    THREE.SpriteAlignment.centerLeft = new THREE.Vector2( 1, 0 );
+    THREE.SpriteAlignment.center = new THREE.Vector2( 0, 0 );
+    THREE.SpriteAlignment.centerRight = new THREE.Vector2( -1, 0 );
+    THREE.SpriteAlignment.bottomLeft = new THREE.Vector2( 1, 1 );
+    THREE.SpriteAlignment.bottomCenter = new THREE.Vector2( 0, 1 );
+    THREE.SpriteAlignment.bottomRight = new THREE.Vector2( -1, 1 );
+
     var tick = 0;
     var shiftInTime = 10;
 
@@ -9,7 +20,7 @@ $(function () {
     var pink = 0xFF1493;
     var green = 0x00ff00;
     var brown = 0xff8000;
-    var black = 0x000000;
+    var black = 0x000001;
 
     var scene, camera, raycaster, mouse, renderer, controls;
     var modal, header, content, span;
@@ -48,22 +59,19 @@ $(function () {
         raycaster = new THREE.Raycaster();
         mouse = new THREE.Vector2();
 
-        camera.position.set(-1400, 500, 2500);
-        camera.lookAt(new THREE.Vector3(-550, 1620, 660));
+        camera.position.set(-4000, 2000, 5000);
+        //camera.lookAt(new THREE.Vector3(10000, 2500, 860));
 
         // Setup Renderer
         renderer = new THREE.WebGLRenderer({
             antialias: true
         });
 
-        //renderer.shadowMap.enabled = true;
-        //renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild( renderer.domElement );
 
         controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.maxDistance = 3000;
+        controls.maxDistance = 5000;
         controls.minDistance = 100;
         controls.maxPolarAngle = (Math.PI / 2) - (Math.PI / 200);
 
@@ -94,7 +102,7 @@ $(function () {
         $.when($.ajax({
             url: 'dataset/bcsv.csv',
             dataType: 'text'
-        }).done(parsingDataset)).then(init3DElements);
+        }).done(parsingDataset)).then(createDatGui);
     }
 
 
@@ -112,7 +120,15 @@ $(function () {
         if ( intersects.length > 0 ) {
 
             if(event.which === 1){
-                    intersects[0].object.material.color.setHex(intersects[0].object.material.color.getHex() * 0xffffff);
+                intersects[0].object.material.color.setHex(intersects[0].object.material.color.getHex() * 0xffffff);
+                if (intersects[0].object['spritey'].visible){
+                    scene.remove(intersects[0].object['spritey']);
+                    intersects[0].object['spritey'].visible = false;
+                }
+                else {
+                    scene.add(intersects[0].object['spritey']);
+                    intersects[0].object['spritey'].visible = true;
+                }
             }
             else if (event.which === 3){
                 var timestamp = intersects[0].object['timestamp'];
@@ -120,10 +136,11 @@ $(function () {
 
                 header.innerHTML = ' <h2> Details - ' + packetNum[timestamp][protocol]['count'] + ' packets </h2>';
 
-                var text = '<h3>Src IP addr  <span class="tab9"> Dst IP add </h3> </span> <br/>';
+                var text ='<h3>Src IP addr<span class="tab9">Dst IP add<span class="tab9">State</h3></span></span><br/>';
                 for(var i = 0; i < packetNum[timestamp][protocol]['count']; i++){
                     text = text + packetNum[timestamp][protocol]['srcIP'][i]
-                        + ' <span class="tab9">' + packetNum[timestamp][protocol]['dstIP'][i] + '</span> <br/>';
+                        + '<span class="tab9">' + packetNum[timestamp][protocol]['dstIP'][i]
+                        + '<span class="tab9">' + packetNum[timestamp][protocol]['state'][i] + '</span></span><br/>';
                 }
                 content.innerHTML = text;
 
@@ -139,12 +156,12 @@ $(function () {
 
         var ref = parseInt(dataset[0].Timestamp);
         while (ref <= parseInt(dataset[dataset.length - 1].Timestamp)) {
-            packetNum[ref] = {"ARP": {'count': 0, 'srcIP':[], 'dstIP':[]},
-                "IP": {'count': 0, 'srcIP':[], 'dstIP':[]},
-                "IPv6": {'count': 0, 'srcIP':[], 'dstIP':[]},
-                "TCP": {'count': 0, 'srcIP':[], 'dstIP':[]},
-                "UDP": {'count': 0, 'srcIP':[], 'dstIP':[]},
-                "Others": {'count': 0, 'srcIP':[], 'dstIP':[]}};
+            packetNum[ref] = {"ARP": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[]},
+                "IP": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[]},
+                "IPv6": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[]},
+                "TCP": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[]},
+                "UDP": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[]},
+                "Others": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[]}};
             ref += shiftInTime; //shift in timestamps of charts
         }
         ref = parseInt(dataset[0].Timestamp);
@@ -156,31 +173,37 @@ $(function () {
                     packetNum[idx]['ARP']['count']++;
                     packetNum[idx]['ARP']['srcIP'].push(dataset[i]['SrcIP']);
                     packetNum[idx]['ARP']['dstIP'].push(dataset[i]['DstIP']);
+                    packetNum[idx]['ARP']['state'].push(dataset[i]['State']);
                     break;
                 case "ip":
                     packetNum[idx]['IP']['count']++;
                     packetNum[idx]['IP']['srcIP'].push(dataset[i]['SrcIP']);
                     packetNum[idx]['IP']['dstIP'].push(dataset[i]['DstIP']);
+                    packetNum[idx]['IP']['state'].push(dataset[i]['State']);
                     break;
                 case "ipv6":
                     packetNum[idx]['IPv6']['count']++;
                     packetNum[idx]['IPv6']['srcIP'].push(dataset[i]['SrcIP']);
                     packetNum[idx]['IPv6']['dstIP'].push(dataset[i]['DstIP']);
+                    packetNum[idx]['IPv6']['state'].push(dataset[i]['State']);
                     break;
                 case "tcp":
                     packetNum[idx]['TCP']['count']++;
                     packetNum[idx]['TCP']['srcIP'].push(dataset[i]['SrcIP']);
                     packetNum[idx]['TCP']['dstIP'].push(dataset[i]['DstIP']);
+                    packetNum[idx]['TCP']['state'].push(dataset[i]['State']);
                     break;
                 case "udp":
                     packetNum[idx]['UDP']['count']++;
                     packetNum[idx]['UDP']['srcIP'].push(dataset[i]['SrcIP']);
                     packetNum[idx]['UDP']['dstIP'].push(dataset[i]['DstIP']);
+                    packetNum[idx]['UDP']['state'].push(dataset[i]['State']);
                     break;
                 default :
                     packetNum[idx]['Others']['count']++;
                     packetNum[idx]['Others']['srcIP'].push(dataset[i]['SrcIP']);
                     packetNum[idx]['Others']['dstIP'].push(dataset[i]['DstIP']);
+                    packetNum[idx]['Others']['state'].push(dataset[i]['State']);
             }
         }
         console.log(packetNum);
@@ -188,11 +211,10 @@ $(function () {
 //creating bars
         i = 0;
         for (var timestamp in packetNum) {
-            createBar(6, -400 + (-i * 5), timestamp);
+            createBar(6, 1500 + (-i * 5), timestamp);
             i++;
         }
         createLight();
-        createDatGui();
     }
 
     function parsingDataset(data) {
@@ -274,12 +296,17 @@ $(function () {
                     opacity : 1
                 });
 
-                id = new THREE.Mesh(geometry, material);
+                var spritey = makeTextSprite(" " + protocol + " - " + packetNum[timestamp][protocol]['count'] + " ", { fontsize: 25, backgroundColor: {r:255, g:100, b:100, a:0.75} } );
+                spritey.position.set(0, (packetNum[timestamp][protocol]['count'] / 2) - 10, z + 1030);
+                spritey.visible = false;
+
+                var id = new THREE.Mesh(geometry, material);
 
                 id.position.x = i * 5;
                 id.position.z = 1000;
                 id['protocol'] = protocol;
                 id['timestamp'] = timestamp;
+                id['spritey'] = spritey;
                 // id.name = "bar-" + i;
                 // id.castShadow = true;
                 // id.receiveShadow = true;
@@ -325,18 +352,19 @@ $(function () {
         var gui = new dat.gui.GUI();
 
         var obj = {
-            ARP: bar[arp].material.color.getHex(),
-            IP: bar[ip].material.color.getHex(),
-            IPv6: bar[ipv6].material.color.getHex(),
-            TCP: bar[tcp].material.color.getHex(),
-            UDP: bar[udp].material.color.getHex(),
-            OTHERS: bar[others].material.color.getHex()
+            ARP: red,
+            IP: pink,
+            IPv6: blue,
+            TCP: green,
+            UDP: brown,
+            OTHERS: black
         };
 
         var funkcia = {
             MathFunction: 'Less',
             Number : 50,
-            Reset : function() { resetBars() }
+            Reset : function() { resetBars() },
+            Time : shiftInTime
         };
 
         var colorFolder = gui.addFolder('Bars colors');
@@ -389,7 +417,7 @@ $(function () {
         filterFolder.open();
 
         filterFolder.add(funkcia, "MathFunction", ['Less', 'Greater', 'Equal']);
-        var controllerCount = filterFolder.add(funkcia, "Number", 0, 500);
+        var controllerCount = filterFolder.add(funkcia, "Number", 0, 800);
 
         controllerCount.onChange(function () {
             for (var b = 0; b < bar.length; b++) {
@@ -419,11 +447,24 @@ $(function () {
                         break;
                 }
         });
+
+        var scaleFolder = gui.addFolder('Time scale');
+        scaleFolder.open();
+        var controllerScale = scaleFolder.add(funkcia, "Time", 5, 100);
+        controllerScale.onChange(function () {
+            shiftInTime = funkcia.Time;
+            packetNum = {};
+            bar = [];
+            scene = new THREE.Scene();
+            init3DElements();
+        });
+
         gui.add(funkcia, 'Reset').name("Reset bars");
 
         function resetBars (){
             for (var b = 0; b < bar.length; b++) {
                 bar[b].material.opacity = 1;
+                bar[b]['spritey'].visible = false;
                 switch (bar[b]['protocol']) {
                     case "ARP":
                         bar[b].material.color = new THREE.Color(red);
@@ -445,46 +486,122 @@ $(function () {
                 }
             }
         }
-
+        init3DElements();
     }
 
-    function createAGrid(opts) {
-        var config = opts || {
-            height: 6000,
-            width: 6000,
-            linesHeight: 100,
-            linesWidth: 100,
-            color: 0xDD006C
-        };
+    // function createAGrid(opts) {
+    //     var config = opts || {
+    //         height: 6000,
+    //         width: 6000,
+    //         linesHeight: 100,
+    //         linesWidth: 100,
+    //         color: 0xDD006C
+    //     };
+    //
+    //     var material = new THREE.LineBasicMaterial({
+    //         color: config.color,
+    //         opacity: 0.2
+    //     });
+    //
+    //     var gridObject = new THREE.Object3D(),
+    //         gridGeo = new THREE.Geometry(),
+    //         stepw = 2 * config.width / config.linesWidth,
+    //         steph = 2 * config.height / config.linesHeight;
+    //
+    //     //width
+    //     for (var i = -config.width; i <= config.width; i += stepw) {
+    //         gridGeo.vertices.push(new THREE.Vector3(-config.height, i, 0));
+    //         gridGeo.vertices.push(new THREE.Vector3(config.height, i, 0));
+    //
+    //     }
+    //     //height
+    //     for (var i = -config.height; i <= config.height; i += steph) {
+    //         gridGeo.vertices.push(new THREE.Vector3(i, -config.width, 0));
+    //         gridGeo.vertices.push(new THREE.Vector3(i, config.width, 0));
+    //     }
+    //
+    //     var line = new THREE.Line(gridGeo, material, THREE.LinePieces);
+    //     gridObject.add(line);
+    //
+    //     return gridObject;
+    // }
 
-        var material = new THREE.LineBasicMaterial({
-            color: config.color,
-            opacity: 0.2
-        });
+    function makeTextSprite( message, parameters ) {
+        if ( parameters === undefined ) parameters = {};
 
-        var gridObject = new THREE.Object3D(),
-            gridGeo = new THREE.Geometry(),
-            stepw = 2 * config.width / config.linesWidth,
-            steph = 2 * config.height / config.linesHeight;
+        var fontface = parameters.hasOwnProperty("fontface") ?
+            parameters["fontface"] : "Arial";
 
-        //width
-        for (var i = -config.width; i <= config.width; i += stepw) {
-            gridGeo.vertices.push(new THREE.Vector3(-config.height, i, 0));
-            gridGeo.vertices.push(new THREE.Vector3(config.height, i, 0));
+        var fontsize = parameters.hasOwnProperty("fontsize") ?
+            parameters["fontsize"] : 18;
 
-        }
-        //height
-        for (var i = -config.height; i <= config.height; i += steph) {
-            gridGeo.vertices.push(new THREE.Vector3(i, -config.width, 0));
-            gridGeo.vertices.push(new THREE.Vector3(i, config.width, 0));
-        }
+        var borderThickness = parameters.hasOwnProperty("borderThickness") ?
+            parameters["borderThickness"] : 4;
 
-        var line = new THREE.Line(gridGeo, material, THREE.LinePieces);
-        gridObject.add(line);
+        var borderColor = parameters.hasOwnProperty("borderColor") ?
+            parameters["borderColor"] : { r:0, g:0, b:0, a:1.0 };
 
-        return gridObject;
+        var backgroundColor = parameters.hasOwnProperty("backgroundColor") ?
+            parameters["backgroundColor"] : { r:255, g:255, b:255, a:1.0 };
+
+        //var spriteAlignment = parameters.hasOwnProperty("alignment") ?
+        //	parameters["alignment"] : THREE.SpriteAlignment.topLeft;
+
+
+        var canvas = document.createElement('canvas');
+        var context = canvas.getContext('2d');
+        context.font = "Bold " + fontsize + "px " + fontface;
+
+        // get size data (height depends only on font size)
+        var metrics = context.measureText( message );
+        var textWidth = metrics.width;
+
+        // background color
+        context.fillStyle   = "rgba(" + backgroundColor.r + "," + backgroundColor.g + ","
+            + backgroundColor.b + "," + backgroundColor.a + ")";
+        // border color
+        context.strokeStyle = "rgba(" + borderColor.r + "," + borderColor.g + ","
+            + borderColor.b + "," + borderColor.a + ")";
+
+        context.lineWidth = borderThickness;
+        roundRect(context, borderThickness/2, borderThickness/2, textWidth + borderThickness, fontsize * 1.4 + borderThickness, 6);
+        // 1.4 is extra height factor for text below baseline: g,j,p,q.
+
+        // text color
+        context.fillStyle = "rgba(0, 0, 0, 1.0)";
+
+        context.fillText( message, borderThickness, fontsize + borderThickness);
+
+        // canvas contents will be used for a texture
+        var texture = new THREE.Texture(canvas);
+        texture.needsUpdate = true;
+
+        var spriteMaterial = new THREE.SpriteMaterial(
+            { map: texture, useScreenCoordinates: false } );
+        var sprite = new THREE.Sprite( spriteMaterial );
+        sprite.scale.set(100, 100, 1);
+        return sprite;
     }
-    
+
+    // function for drawing rounded rectangles
+    function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x+r, y);
+        ctx.lineTo(x+w-r, y);
+        ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+        ctx.lineTo(x+w, y+h-r);
+        ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+        ctx.lineTo(x+r, y+h);
+        ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+        ctx.lineTo(x, y+r);
+        ctx.quadraticCurveTo(x, y, x+r, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    }
+
+
+
     function render() {
 
         tick++;
