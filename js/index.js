@@ -23,19 +23,16 @@ $(function () {
     var black = 0x000001;
 
     var scene, camera, raycaster, mouse, renderer, controls;
-    var modal, header, content, span;
+    var modal, header, content, span, table;
 
 // Arrays
     var bar = [];
+    var lines = [];
     var dataset;
     var packetNum = {};
-    // var opts = {
-    //      height: 2000,
-    //      width: 2000,
-    //      linesHeight: 10,
-    //      linesWidth: 20,
-    //      color: 0xcccccc
-    //     };
+    var gui;
+    var grid1;
+    var grid2;
 
     init();
     document.addEventListener( 'mousedown', onDocumentMouseDown, false );
@@ -44,7 +41,6 @@ $(function () {
     function init() {
         initListeners();
         init3DScene();
-        //createAGrid(opts);
     }
 
     function initListeners() {
@@ -81,6 +77,7 @@ $(function () {
         modal = document.getElementById('myModal');
         header = document.getElementById('myModalHeader');
         content = document.getElementById("myModalBody");
+        table = document.getElementById("myTable");
 
         // Get the <span> element that closes the modal
         span = document.getElementsByClassName("close")[0];
@@ -118,31 +115,81 @@ $(function () {
         var intersects = raycaster.intersectObjects(bar);
 
         if ( intersects.length > 0 ) {
-
+            // After left-click on bar
             if(event.which === 1){
+                // if (grid1 == null) {
+                //     var opts = {
+                //         height: 15,
+                //         width: 2.5 * Object.keys(packetNum).length,
+                //         linesHeight: 6,
+                //         linesWidth: Object.keys(packetNum).length,
+                //         color: 0xDBDBDB
+                //     };
+                //     grid1 = createAGrid(opts, -90, 0, 12.5, 0);
+                //     scene.add(grid1);
+                //
+                //     opts = {
+                //         width: 250,
+                //         height: 2.5 * Object.keys(packetNum).length,
+                //         linesWidth: 100,
+                //         linesHeight: Object.keys(packetNum).length,
+                //         color: 0xDBDBDB
+                //     };
+                //     grid2 = createAGrid(opts, 0, -90, 27.5, 250);
+                //     scene.add(grid2);
+                // }
+
+
+                //changing colour after click
                 intersects[0].object.material.color.setHex(intersects[0].object.material.color.getHex() * 0xffffff);
                 if (intersects[0].object['spritey'].visible){
                     scene.remove(intersects[0].object['spritey']);
                     intersects[0].object['spritey'].visible = false;
+                    scene.remove(lines.find(function (value) {
+                        return value.name === intersects[0].object.name;
+                    }));
+                    removeByAttr(lines, 'name', intersects[0].object.name);
+                    //TODO line remove
                 }
                 else {
                     scene.add(intersects[0].object['spritey']);
                     intersects[0].object['spritey'].visible = true;
+
+                    var material = new THREE.LineBasicMaterial({
+                        color: red
+                    });
+
+                    var geometry = new THREE.Geometry();
+                    geometry.vertices.push(
+                        new THREE.Vector3( -10, 0, 0 ),
+                        new THREE.Vector3( 0, 0, 0 ),
+                        new THREE.Vector3( 5 * Object.keys(packetNum).length, 0, 0 )
+                    );
+
+                    var line = new THREE.Line( geometry, material );
+                    line.position.z = 2505 - (5 * Object.keys(packetNum).length);
+                    line.position.y = intersects[0].object['height'];
+                    line.rotation.y = THREE.Math.degToRad(-90);
+                    line.name = intersects[0].object.name;
+                    scene.add( line );
+                    lines.push(line);
+
                 }
             }
+            //Right click - modal window with srcIP, dstIP, state and attack + filtering
             else if (event.which === 3){
                 var timestamp = intersects[0].object['timestamp'];
                 var protocol = intersects[0].object['protocol'];
 
                 header.innerHTML = ' <h2> Details - ' + packetNum[timestamp][protocol]['count'] + ' packets </h2>';
-
-                var text ='<h3>Src IP addr<span class="tab9">Dst IP add<span class="tab9">State</h3></span></span><br/>';
+                var text ='<tr class="header"><th>Src IP add</th><th>Dst IP add</th><th>State</th><th>Attack</th></tr>';
                 for(var i = 0; i < packetNum[timestamp][protocol]['count']; i++){
-                    text = text + packetNum[timestamp][protocol]['srcIP'][i]
-                        + '<span class="tab9">' + packetNum[timestamp][protocol]['dstIP'][i]
-                        + '<span class="tab9">' + packetNum[timestamp][protocol]['state'][i] + '</span></span><br/>';
-                }
-                content.innerHTML = text;
+                        text = text + '<tr><td>' + packetNum[timestamp][protocol]['srcIP'][i] + '</td><td>'
+                            + packetNum[timestamp][protocol]['dstIP'][i] + '</td><td>'
+                            + packetNum[timestamp][protocol]['state'][i] + '</td><td>'
+                            + packetNum[timestamp][protocol]['attackLabel'][i] + '</td></tr>';
+                    }
+                table.innerHTML = text;
 
                 // When the user clicks on <span> (x), close the modal
                 modal.style.display = "block";
@@ -156,12 +203,12 @@ $(function () {
 
         var ref = parseInt(dataset[0].Timestamp);
         while (ref <= parseInt(dataset[dataset.length - 1].Timestamp)) {
-            packetNum[ref] = {"ARP": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[]},
-                "IP": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[]},
-                "IPv6": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[]},
-                "TCP": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[]},
-                "UDP": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[]},
-                "Others": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[]}};
+            packetNum[ref] = {"ARP": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[], 'attackLabel':[]},
+                "IP": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[], 'attackLabel':[]},
+                "IPv6": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[], 'attackLabel':[]},
+                "TCP": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[], 'attackLabel':[]},
+                "UDP": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[], 'attackLabel':[]},
+                "Others": {'count': 0, 'srcIP':[], 'dstIP':[], 'state':[], 'attackLabel':[]}};
             ref += shiftInTime; //shift in timestamps of charts
         }
         ref = parseInt(dataset[0].Timestamp);
@@ -174,45 +221,68 @@ $(function () {
                     packetNum[idx]['ARP']['srcIP'].push(dataset[i]['SrcIP']);
                     packetNum[idx]['ARP']['dstIP'].push(dataset[i]['DstIP']);
                     packetNum[idx]['ARP']['state'].push(dataset[i]['State']);
+                    packetNum[idx]['ARP']['attackLabel'].push(dataset[i]['AttackLabel']);
                     break;
                 case "ip":
                     packetNum[idx]['IP']['count']++;
                     packetNum[idx]['IP']['srcIP'].push(dataset[i]['SrcIP']);
                     packetNum[idx]['IP']['dstIP'].push(dataset[i]['DstIP']);
                     packetNum[idx]['IP']['state'].push(dataset[i]['State']);
+                    packetNum[idx]['IP']['attackLabel'].push(dataset[i]['AttackLabel']);
                     break;
                 case "ipv6":
                     packetNum[idx]['IPv6']['count']++;
                     packetNum[idx]['IPv6']['srcIP'].push(dataset[i]['SrcIP']);
                     packetNum[idx]['IPv6']['dstIP'].push(dataset[i]['DstIP']);
                     packetNum[idx]['IPv6']['state'].push(dataset[i]['State']);
+                    packetNum[idx]['IPv6']['attackLabel'].push(dataset[i]['AttackLabel']);
                     break;
                 case "tcp":
                     packetNum[idx]['TCP']['count']++;
                     packetNum[idx]['TCP']['srcIP'].push(dataset[i]['SrcIP']);
                     packetNum[idx]['TCP']['dstIP'].push(dataset[i]['DstIP']);
                     packetNum[idx]['TCP']['state'].push(dataset[i]['State']);
+                    packetNum[idx]['TCP']['attackLabel'].push(dataset[i]['AttackLabel']);
                     break;
                 case "udp":
                     packetNum[idx]['UDP']['count']++;
                     packetNum[idx]['UDP']['srcIP'].push(dataset[i]['SrcIP']);
                     packetNum[idx]['UDP']['dstIP'].push(dataset[i]['DstIP']);
                     packetNum[idx]['UDP']['state'].push(dataset[i]['State']);
+                    packetNum[idx]['UDP']['attackLabel'].push(dataset[i]['AttackLabel']);
                     break;
                 default :
                     packetNum[idx]['Others']['count']++;
                     packetNum[idx]['Others']['srcIP'].push(dataset[i]['SrcIP']);
                     packetNum[idx]['Others']['dstIP'].push(dataset[i]['DstIP']);
                     packetNum[idx]['Others']['state'].push(dataset[i]['State']);
+                    packetNum[idx]['Others']['attackLabel'].push(dataset[i]['AttackLabel']);
             }
         }
-        console.log(packetNum);
+        //console.log(packetNum);
         createFloor();
-//creating bars
+
+        //creating bars
         i = 0;
         for (var timestamp in packetNum) {
             createBar(6, 1500 + (-i * 5), timestamp);
             i++;
+        }
+
+        //timestamp axis
+        var help = 2500;
+       // var help2 = Object.keys(packetNum).length;
+        var pom = 0;
+        for (var timestamp in packetNum) {
+
+            if (pom % 20 == 0)
+            {
+                var spriteyAxis = makeTextSpriteAxis(toTime(timestamp));
+                spriteyAxis.position.set(-60, 0, help);
+                scene.add(spriteyAxis);
+                help = help - 100;
+            }
+            pom++;
         }
         createLight();
     }
@@ -243,7 +313,6 @@ $(function () {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
-
     }
 
     function createLight() {
@@ -258,7 +327,6 @@ $(function () {
         spot.shadowDarkness = 0.2;
 
         scene.add(ambient, spot);
-
     }
 
     function createBar(total, z, timestamp) {
@@ -296,7 +364,7 @@ $(function () {
                     opacity : 1
                 });
 
-                var spritey = makeTextSprite(" " + protocol + " - " + packetNum[timestamp][protocol]['count'] + " ", { fontsize: 25, backgroundColor: {r:255, g:100, b:100, a:0.75} } );
+                var spritey = makeTextSpriteLabel(" " + protocol + " - " + packetNum[timestamp][protocol]['count'] + " ");
                 spritey.position.set(0, (packetNum[timestamp][protocol]['count'] / 2) - 10, z + 1030);
                 spritey.visible = false;
 
@@ -307,17 +375,17 @@ $(function () {
                 id['protocol'] = protocol;
                 id['timestamp'] = timestamp;
                 id['spritey'] = spritey;
-                // id.name = "bar-" + i;
+                id['height'] = packetNum[timestamp][protocol]['count'] / 2;
+                id.name = timestamp + "-" + i;
                 // id.castShadow = true;
                 // id.receiveShadow = true;
 
                 scene.add(id);
                 bar.push(id);
 
-                selectedBar = bar[Math.floor(bar.length / 2)];
+                //selectedBar = bar[Math.floor(bar.length / 2)];
 
             i++;
-
         }
     }
 
@@ -338,7 +406,6 @@ $(function () {
         floor.receiveShadow = true;
 
         scene.add(floor);
-
     }
 
     function createDatGui() {
@@ -349,16 +416,30 @@ $(function () {
         var udp = 4;
         var others = 5;
 
-        var gui = new dat.gui.GUI();
+        gui = new dat.gui.GUI();
 
-        var obj = {
-            ARP: red,
-            IP: pink,
-            IPv6: blue,
-            TCP: green,
-            UDP: brown,
-            OTHERS: black
-        };
+        var obj;
+
+        if(bar.length === 0){
+            obj = {
+                ARP: red,
+                IP: pink,
+                IPv6: blue,
+                TCP: green,
+                UDP: brown,
+                OTHERS: black
+            };
+        }
+        else{
+            obj = {
+                ARP: bar[arp].material.color.getHex(),
+                IP: bar[ip].material.color.getHex(),
+                IPv6: bar[ipv6].material.color.getHex(),
+                TCP: bar[tcp].material.color.getHex(),
+                UDP: bar[udp].material.color.getHex(),
+                OTHERS: bar[others].material.color.getHex()
+            };
+        }
 
         var funkcia = {
             MathFunction: 'Less',
@@ -418,6 +499,7 @@ $(function () {
 
         filterFolder.add(funkcia, "MathFunction", ['Less', 'Greater', 'Equal']);
         var controllerCount = filterFolder.add(funkcia, "Number", 0, 800);
+        controllerCount.name("Number [packets] ");
 
         controllerCount.onChange(function () {
             for (var b = 0; b < bar.length; b++) {
@@ -450,18 +532,36 @@ $(function () {
 
         var scaleFolder = gui.addFolder('Time scale');
         scaleFolder.open();
-        var controllerScale = scaleFolder.add(funkcia, "Time", 5, 100);
+        var controllerScale = scaleFolder.add(funkcia, "Time");
+        controllerScale.name("Time [s] (min 5)");
         controllerScale.onChange(function () {
             shiftInTime = funkcia.Time;
             packetNum = {};
             bar = [];
             scene = new THREE.Scene();
             init3DElements();
+            scene.remove(grid1);
+            scene.remove(grid2);
+            grid1 = null;
+            grid2 = null;
         });
 
         gui.add(funkcia, 'Reset').name("Reset bars");
 
         function resetBars (){
+            scene.remove(grid1);
+            scene.remove(grid2);
+            grid1 = null;
+            grid2 = null;
+
+            var count = lines.length;
+            for (var i = 0; i < count; i++){
+                scene.remove(lines.find(function (value) {
+                    return value.name === lines[0].name;
+                }));
+                removeByAttr(lines, 'name', lines[0].name);
+            }
+
             for (var b = 0; b < bar.length; b++) {
                 bar[b].material.opacity = 1;
                 bar[b]['spritey'].visible = false;
@@ -485,68 +585,90 @@ $(function () {
                         bar[b].material.color = new THREE.Color(black);
                 }
             }
+            colorFolder.remove(controllerARP);
+            colorFolder.remove(controllerIP);
+            colorFolder.remove(controllerIPv6);
+            colorFolder.remove(controllerTCP);
+            colorFolder.remove(controllerUDP);
+            colorFolder.remove(controllerOTHERS);
+            obj = {
+                ARP: bar[arp].material.color.getHex(),
+                IP: bar[ip].material.color.getHex(),
+                IPv6: bar[ipv6].material.color.getHex(),
+                TCP: bar[tcp].material.color.getHex(),
+                UDP: bar[udp].material.color.getHex(),
+                OTHERS: bar[others].material.color.getHex()
+            };
+            colorFolder.addColor(obj, 'ARP');
+            colorFolder.addColor(obj, 'IP');
+            colorFolder.addColor(obj, 'IPv6');
+            colorFolder.addColor(obj, 'TCP');
+            colorFolder.addColor(obj, 'UDP');
+            colorFolder.addColor(obj, 'OTHERS');
         }
         init3DElements();
     }
 
-    // function createAGrid(opts) {
-    //     var config = opts || {
-    //         height: 6000,
-    //         width: 6000,
-    //         linesHeight: 100,
-    //         linesWidth: 100,
-    //         color: 0xDD006C
-    //     };
-    //
-    //     var material = new THREE.LineBasicMaterial({
-    //         color: config.color,
-    //         opacity: 0.2
-    //     });
-    //
-    //     var gridObject = new THREE.Object3D(),
-    //         gridGeo = new THREE.Geometry(),
-    //         stepw = 2 * config.width / config.linesWidth,
-    //         steph = 2 * config.height / config.linesHeight;
-    //
-    //     //width
-    //     for (var i = -config.width; i <= config.width; i += stepw) {
-    //         gridGeo.vertices.push(new THREE.Vector3(-config.height, i, 0));
-    //         gridGeo.vertices.push(new THREE.Vector3(config.height, i, 0));
-    //
-    //     }
-    //     //height
-    //     for (var i = -config.height; i <= config.height; i += steph) {
-    //         gridGeo.vertices.push(new THREE.Vector3(i, -config.width, 0));
-    //         gridGeo.vertices.push(new THREE.Vector3(i, config.width, 0));
-    //     }
-    //
-    //     var line = new THREE.Line(gridGeo, material, THREE.LinePieces);
-    //     gridObject.add(line);
-    //
-    //     return gridObject;
-    // }
+    function createAGrid(opts, degreex, degreez, posx, posy) {
+        var config = opts || {
+            height: 15,
+            width: 2.5 * Object.keys(packetNum).length,
+            linesHeight: 6,
+            linesWidth: Object.keys(packetNum).length,
+            color: 0xDBDBDB
+        };
 
-    function makeTextSprite( message, parameters ) {
+        var material = new THREE.LineBasicMaterial({
+            color: config.color,
+            opacity: 0.2
+        });
+
+        var gridObject = new THREE.Object3D(),
+            gridGeo = new THREE.Geometry(),
+            stepw = 2 * config.width / config.linesWidth,
+            steph = 2 * config.height / config.linesHeight;
+
+        //width
+        for (var i = -config.width; i <= config.width; i += stepw) {
+            gridGeo.vertices.push(new THREE.Vector3(-config.height, i, 0));
+            gridGeo.vertices.push(new THREE.Vector3(config.height, i, 0));
+
+        }
+        //height
+        for (var i = -config.height; i <= config.height; i += steph) {
+            gridGeo.vertices.push(new THREE.Vector3(i, -config.width, 0));
+            gridGeo.vertices.push(new THREE.Vector3(i, config.width, 0));
+        }
+
+        var line = new THREE.Line(gridGeo, material, THREE.LinePieces);
+        gridObject.add(line);
+        gridObject.rotation.y = THREE.Math.degToRad(degreez);
+        gridObject.rotation.x = THREE.Math.degToRad(degreex);
+        gridObject.position.z = 1257.5;
+        gridObject.position.x = posx;
+        gridObject.position.y = posy;
+
+
+        return gridObject;
+    }
+
+    function makeTextSpriteLabel( message, parameters ) {
         if ( parameters === undefined ) parameters = {};
 
         var fontface = parameters.hasOwnProperty("fontface") ?
             parameters["fontface"] : "Arial";
 
         var fontsize = parameters.hasOwnProperty("fontsize") ?
-            parameters["fontsize"] : 18;
+            parameters["fontsize"] : 25;
 
         var borderThickness = parameters.hasOwnProperty("borderThickness") ?
-            parameters["borderThickness"] : 4;
+            parameters["borderThickness"] : 2;
 
         var borderColor = parameters.hasOwnProperty("borderColor") ?
             parameters["borderColor"] : { r:0, g:0, b:0, a:1.0 };
 
         var backgroundColor = parameters.hasOwnProperty("backgroundColor") ?
-            parameters["backgroundColor"] : { r:255, g:255, b:255, a:1.0 };
-
-        //var spriteAlignment = parameters.hasOwnProperty("alignment") ?
-        //	parameters["alignment"] : THREE.SpriteAlignment.topLeft;
-
+            parameters["backgroundColor"] : { r:207, g:253, b:82, a:1.0 };
 
         var canvas = document.createElement('canvas');
         var context = canvas.getContext('2d');
@@ -583,6 +705,64 @@ $(function () {
         return sprite;
     }
 
+    function makeTextSpriteAxis(message, opts) {
+        var parameters = opts || {};
+        var fontface = parameters.fontface || 'Helvetica';
+        var fontsize = parameters.fontsize || 50;
+        var canvas = document.createElement('canvas');
+        var context = canvas.getContext('2d');
+        context.font = fontsize + "px " + fontface;
+
+        // get size data (height depends only on font size)
+        var metrics = context.measureText(message);
+        var textWidth = metrics.width;
+
+        // text color
+        context.fillStyle = 'rgba(0, 0, 0, 1.0)';
+        context.fillText(message, 0, fontsize);
+
+        // canvas contents will be used for a texture
+        var texture = new THREE.Texture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.needsUpdate = true;
+
+        var spriteMaterial = new THREE.SpriteMaterial({
+            map: texture,
+            useScreenCoordinates: false
+        });
+        var sprite = new THREE.Sprite(spriteMaterial);
+        sprite.scale.set(100, 50, 1.0);
+        return sprite;
+    }
+
+    function toTime(time){
+        var date = new Date(time*1000);
+        // Hours part from the timestamp
+        var hours = date.getHours();
+        // Minutes part from the timestamp
+        var minutes = "0" + date.getMinutes();
+        // Seconds part from the timestamp
+        var seconds = "0" + date.getSeconds();
+
+        // Will display time in 10:30:23 format
+        var formattedTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+        return (formattedTime);
+    }
+
+    var removeByAttr = function(arr, attr, value){
+        var i = arr.length;
+        while(i--){
+            if( arr[i]
+                && arr[i].hasOwnProperty(attr)
+                && (arguments.length > 2 && arr[i][attr] === value ) ){
+
+                arr.splice(i,1);
+
+            }
+        }
+        return arr;
+    };
+
     // function for drawing rounded rectangles
     function roundRect(ctx, x, y, w, h, r) {
         ctx.beginPath();
@@ -599,7 +779,6 @@ $(function () {
         ctx.fill();
         ctx.stroke();
     }
-
 
 
     function render() {

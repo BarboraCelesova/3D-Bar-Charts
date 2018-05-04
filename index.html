@@ -17,8 +17,7 @@
 </head>
 
 <body>
-
-  	<div id="webGL-container"></div>
+    <div id="webGL-container"></div>
 
     <div id="myModal" class="modal">
         <div class="modal-content">
@@ -26,14 +25,39 @@
                 <span class="close">&times;</span>
                 <h2>Details</h2>
             </div>
-            <div id="myModalBody" class="modal-body">
-                <p>Some text in the Modal Body</p>
-            </div>
+            <input type="text" id="myInput" onkeyup="myTableFunction()" placeholder="Search in each category :)">
+            <table id="myTable" class="modal-body">
+            </table>
         </div>
     </div>
 
     <script  src="js/index.js"></script>
     <script  src="js/OrbitControls.js"></script>
+    <script>
+        function myTableFunction() {
+            // Declare variables
+            var input, filter, table, tr, td, i;
+            input = document.getElementById("myInput");
+            filter = input.value.toUpperCase();
+            table = document.getElementById("myTable");
+            tr = table.getElementsByTagName("tr");
+
+            // Loop through all table rows, and hide those who don't match the search query
+            for (i = 0; i < tr.length; i++) {
+                for (j = 0; j < 4; j++) {
+                    td = tr[i].getElementsByTagName("td")[j];
+                    if (td) {
+                        if (td.innerHTML.toUpperCase().indexOf(filter) > -1) {
+                            tr[i].style.display = "";
+                            break;
+                        } else {
+                            tr[i].style.display = "none";
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 
 </body>
 
