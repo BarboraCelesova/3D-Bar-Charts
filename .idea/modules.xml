@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/threejs-dynamic-bar-graph-randomised.iml" filepath="$PROJECT_DIR$/.idea/threejs-dynamic-bar-graph-randomised.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Visualisation_of_network_traffic_using_3D_bar_charts.iml" filepath="$PROJECT_DIR$/.idea/Visualisation_of_network_traffic_using_3D_bar_charts.iml" />
     </modules>
   </component>
 </project>

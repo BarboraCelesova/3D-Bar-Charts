@@ -31,8 +31,6 @@ $(function () {
     var dataset;
     var packetNum = {};
     var gui;
-    var grid1;
-    var grid2;
 
     init();
     document.addEventListener( 'mousedown', onDocumentMouseDown, false );
@@ -56,6 +54,7 @@ $(function () {
         mouse = new THREE.Vector2();
 
         camera.position.set(-4000, 2000, 5000);
+
         //camera.lookAt(new THREE.Vector3(10000, 2500, 860));
 
         // Setup Renderer
@@ -69,7 +68,8 @@ $(function () {
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.maxDistance = 5000;
         controls.minDistance = 100;
-        controls.maxPolarAngle = (Math.PI / 2) - (Math.PI / 200);
+        controls.maxPolarAngle = (Math.PI / 2) - (Math.PI / 300);
+        controls.panningMode = 1;
 
         controls.update();
 
@@ -105,8 +105,6 @@ $(function () {
 
     function onDocumentMouseDown( event ) {
 
-        //event.preventDefault();
-
         mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
         mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
 
@@ -117,29 +115,6 @@ $(function () {
         if ( intersects.length > 0 ) {
             // After left-click on bar
             if(event.which === 1){
-                // if (grid1 == null) {
-                //     var opts = {
-                //         height: 15,
-                //         width: 2.5 * Object.keys(packetNum).length,
-                //         linesHeight: 6,
-                //         linesWidth: Object.keys(packetNum).length,
-                //         color: 0xDBDBDB
-                //     };
-                //     grid1 = createAGrid(opts, -90, 0, 12.5, 0);
-                //     scene.add(grid1);
-                //
-                //     opts = {
-                //         width: 250,
-                //         height: 2.5 * Object.keys(packetNum).length,
-                //         linesWidth: 100,
-                //         linesHeight: Object.keys(packetNum).length,
-                //         color: 0xDBDBDB
-                //     };
-                //     grid2 = createAGrid(opts, 0, -90, 27.5, 250);
-                //     scene.add(grid2);
-                // }
-
-
                 //changing colour after click
                 intersects[0].object.material.color.setHex(intersects[0].object.material.color.getHex() * 0xffffff);
                 if (intersects[0].object['spritey'].visible){
@@ -149,14 +124,13 @@ $(function () {
                         return value.name === intersects[0].object.name;
                     }));
                     removeByAttr(lines, 'name', intersects[0].object.name);
-                    //TODO line remove
                 }
                 else {
                     scene.add(intersects[0].object['spritey']);
                     intersects[0].object['spritey'].visible = true;
 
                     var material = new THREE.LineBasicMaterial({
-                        color: red
+                        color: getRandomColor()
                     });
 
                     var geometry = new THREE.Geometry();
@@ -167,7 +141,7 @@ $(function () {
                     );
 
                     var line = new THREE.Line( geometry, material );
-                    line.position.z = 2505 - (5 * Object.keys(packetNum).length);
+                    line.position.z = 2005 - (5 * Object.keys(packetNum).length);
                     line.position.y = intersects[0].object['height'];
                     line.rotation.y = THREE.Math.degToRad(-90);
                     line.name = intersects[0].object.name;
@@ -181,8 +155,9 @@ $(function () {
                 var timestamp = intersects[0].object['timestamp'];
                 var protocol = intersects[0].object['protocol'];
 
-                header.innerHTML = ' <h2> Details - ' + packetNum[timestamp][protocol]['count'] + ' packets </h2>';
+                header.innerHTML = ' <h2> Details - ' + packetNum[timestamp][protocol]['count'] + ' packets &emsp; &emsp; &emsp;Time: ' + toTime(timestamp) + '</h2>';
                 var text ='<tr class="header"><th>Src IP add</th><th>Dst IP add</th><th>State</th><th>Attack</th></tr>';
+
                 for(var i = 0; i < packetNum[timestamp][protocol]['count']; i++){
                         text = text + '<tr><td>' + packetNum[timestamp][protocol]['srcIP'][i] + '</td><td>'
                             + packetNum[timestamp][protocol]['dstIP'][i] + '</td><td>'
@@ -265,13 +240,13 @@ $(function () {
         //creating bars
         i = 0;
         for (var timestamp in packetNum) {
-            createBar(6, 1500 + (-i * 5), timestamp);
+            createBar(6, 1000 + (-i * 5), timestamp);
             i++;
         }
 
         //timestamp axis
-        var help = 2500;
-       // var help2 = Object.keys(packetNum).length;
+        var help = 2000;
+
         var pom = 0;
         for (var timestamp in packetNum) {
 
@@ -301,7 +276,7 @@ $(function () {
             result.push(obj);
         }
         //console.log(JSON.stringify(result)); //JSON
-        dataset = result; //JavaScript object
+        dataset = result;
 
     }
 
@@ -377,13 +352,9 @@ $(function () {
                 id['spritey'] = spritey;
                 id['height'] = packetNum[timestamp][protocol]['count'] / 2;
                 id.name = timestamp + "-" + i;
-                // id.castShadow = true;
-                // id.receiveShadow = true;
 
                 scene.add(id);
                 bar.push(id);
-
-                //selectedBar = bar[Math.floor(bar.length / 2)];
 
             i++;
         }
@@ -391,7 +362,7 @@ $(function () {
 
     function createFloor() {
 
-        var geometry = new THREE.BoxGeometry(6000, 6000, 2000);
+        var geometry = new THREE.BoxGeometry(6000, 8000, 2000);
         var material = new THREE.MeshPhongMaterial({
             color: 0xcccccc,
             shininess: 20
@@ -540,19 +511,13 @@ $(function () {
             bar = [];
             scene = new THREE.Scene();
             init3DElements();
-            scene.remove(grid1);
-            scene.remove(grid2);
-            grid1 = null;
-            grid2 = null;
+            resetBars();
+
         });
 
         gui.add(funkcia, 'Reset').name("Reset bars");
 
         function resetBars (){
-            scene.remove(grid1);
-            scene.remove(grid2);
-            grid1 = null;
-            grid2 = null;
 
             var count = lines.length;
             for (var i = 0; i < count; i++){
@@ -599,57 +564,49 @@ $(function () {
                 UDP: bar[udp].material.color.getHex(),
                 OTHERS: bar[others].material.color.getHex()
             };
-            colorFolder.addColor(obj, 'ARP');
-            colorFolder.addColor(obj, 'IP');
-            colorFolder.addColor(obj, 'IPv6');
-            colorFolder.addColor(obj, 'TCP');
-            colorFolder.addColor(obj, 'UDP');
-            colorFolder.addColor(obj, 'OTHERS');
+            controllerARP = colorFolder.addColor(obj, 'ARP');
+            controllerARP.onChange( function (colorValue) {
+                for(var b = arp; b < bar.length; b+=6){
+                    bar[b].material.color = new THREE.Color(colorValue);
+                }
+            });
+
+            controllerIP = colorFolder.addColor(obj, 'IP');
+            controllerIP.onChange( function (colorValue) {
+                for(var b = ip; b < bar.length; b+=6){
+                    bar[b].material.color = new THREE.Color(colorValue);
+                }
+            });
+
+            controllerIPv6 = colorFolder.addColor(obj, 'IPv6');
+            controllerIPv6.onChange( function (colorValue) {
+                for(var b = ipv6; b < bar.length; b+=6){
+                    bar[b].material.color = new THREE.Color(colorValue);
+                }
+            });
+
+            controllerTCP = colorFolder.addColor(obj, 'TCP');
+            controllerTCP.onChange( function (colorValue) {
+                for(var b = tcp; b < bar.length; b+=6){
+                    bar[b].material.color = new THREE.Color(colorValue);
+                }
+            });
+
+            controllerUDP = colorFolder.addColor(obj, 'UDP');
+            controllerUDP.onChange( function (colorValue) {
+                for(var b = udp; b < bar.length; b+=6){
+                    bar[b].material.color = new THREE.Color(colorValue);
+                }
+            });
+
+            controllerOTHERS = colorFolder.addColor(obj, 'OTHERS');
+            controllerOTHERS.onChange( function (colorValue) {
+                for(var b = others; b < bar.length; b+=6){
+                    bar[b].material.color = new THREE.Color(colorValue);
+                }
+            });
         }
         init3DElements();
-    }
-
-    function createAGrid(opts, degreex, degreez, posx, posy) {
-        var config = opts || {
-            height: 15,
-            width: 2.5 * Object.keys(packetNum).length,
-            linesHeight: 6,
-            linesWidth: Object.keys(packetNum).length,
-            color: 0xDBDBDB
-        };
-
-        var material = new THREE.LineBasicMaterial({
-            color: config.color,
-            opacity: 0.2
-        });
-
-        var gridObject = new THREE.Object3D(),
-            gridGeo = new THREE.Geometry(),
-            stepw = 2 * config.width / config.linesWidth,
-            steph = 2 * config.height / config.linesHeight;
-
-        //width
-        for (var i = -config.width; i <= config.width; i += stepw) {
-            gridGeo.vertices.push(new THREE.Vector3(-config.height, i, 0));
-            gridGeo.vertices.push(new THREE.Vector3(config.height, i, 0));
-
-        }
-        //height
-        for (var i = -config.height; i <= config.height; i += steph) {
-            gridGeo.vertices.push(new THREE.Vector3(i, -config.width, 0));
-            gridGeo.vertices.push(new THREE.Vector3(i, config.width, 0));
-        }
-
-        var line = new THREE.Line(gridGeo, material, THREE.LinePieces);
-        gridObject.add(line);
-        gridObject.rotation.y = THREE.Math.degToRad(degreez);
-        gridObject.rotation.x = THREE.Math.degToRad(degreex);
-        gridObject.position.z = 1257.5;
-        gridObject.position.x = posx;
-        gridObject.position.y = posy;
-
-
-        return gridObject;
     }
 
     function makeTextSpriteLabel( message, parameters ) {
@@ -780,6 +737,14 @@ $(function () {
         ctx.stroke();
     }
 
+    function getRandomColor() {
+        var letters = '0123456789ABCDEF'.split('');
+        var color = '#';
+        for (var i = 0; i < 6; i++ ) {
+            color += letters[Math.round(Math.random() * 15)];
+        }
+        return color;
+    }
 
     function render() {
 
